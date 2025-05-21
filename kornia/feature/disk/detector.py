@@ -28,6 +28,11 @@ from .structs import Keypoints
 
 
 def nms(signal: Tensor, window_size: int = 5, cutoff: float = 0.0) -> Tensor:
+    """Run NMS on CPU"""
+    hpu_run = False
+    if signal.device.type == torch.device("hpu").type:
+        hpu_run = True
+        signal = signal.to("cpu")
     """Apply non-maximum suppression."""
     if window_size % 2 != 1:
         raise ValueError(f"window_size has to be odd, got {window_size}")
@@ -38,6 +43,10 @@ def nms(signal: Tensor, window_size: int = 5, cutoff: float = 0.0) -> Tensor:
     coords = torch.arange(h * w, device=signal.device).reshape(1, h, w)
     nms = ixs == coords
 
+    if hpu_run:
+        nms = nms.to("hpu")
+        signal = signal.to("hpu")
+        
     if cutoff is None:
         return nms
     else:
